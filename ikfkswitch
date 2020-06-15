@@ -1,0 +1,50 @@
+import maya.cmds as cmds
+def findSwitch():
+    for obj in cmds.ls(sl=True):
+        if cmds.objExists(obj + '.ikFkSwitch'):
+            break
+    else:
+        return None
+    switch = cmds.listConnections(obj + '.ikFkSwitch')
+    if switch:
+
+        return switch[0]
+        
+def fkToIk(*args):
+    switch = findSwitch()
+    if not switch:
+        raise ValueError('Please select a switchable IK or FK control.')
+        
+    shoulderFkControl = cmds.listConnections(switch + '.shoulderFkControl')[0]
+    elbowFkControl = cmds.listConnections(switch + '.elbowFkControl')[0]
+    wristFkControl = cmds.listConnections(switch + '.wristFkControl')[0]
+    shoulderIkJoint = cmds.listConnections(switch + '.shoulderIkJoint')[0]
+    elbowIkJoint = cmds.listConnections(switch + '.elbowIkJoint')[0]
+    wristIkJoint = cmds.listConnections(switch + '.wristIkJoint')[0]
+    shoulderRot = cmds.getAttr(shoulderIkJoint + '.rotate')[0]
+    elbowRot = cmds.getAttr(elbowIkJoint + '.rotate')[0]
+    wristRot = cmds.getAttr(wristIkJoint + '.rotate')[0]
+    cmds.setAttr(shoulderFkControl + '.rotate', *shoulderRot)
+    cmds.setAttr(elbowFkControl + '.rotate', *elbowRot)
+    cmds.setAttr(wristFkControl + '.rotate', *wristRot)
+    
+    
+def ikToFk(*args):
+    switch = findSwitch()
+    if not switch:
+        raise ValueError('Please select a switchable IK or FK control.')
+    elbowFkControl = cmds.listConnections(switch + '.elbowFkControl')[0]
+    wristFkControl = cmds.listConnections(switch + '.wristFkControl')[0]
+
+    poleVectorIkControl = cmds.listConnections(switch + '.poleVectorIkControl')[0]
+    armIkControl = cmds.listConnections(switch + '.armIkControl')[0]
+    cmds.delete(cmds.pointConstraint(elbowFkControl, poleVectorIkControl))
+    cmds.delete(cmds.parentConstraint(wristFkControl, armIkControl))
+    
+    
+if cmds.menu('rig_menu', exists=True):
+    cmds.deleteUI('rig_menu')
+    
+cmds.menu('rig_menu', label='Rig', parent='MayaWindow')
+cmds.menuItem(label='FK to IK', c=fkToIk)
+cmds.menuItem(label='IK to FK', c=ikToFk)

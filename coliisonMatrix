@@ -1,0 +1,64 @@
+
+collsionMesh = cmds.ls(sl=True)[0]
+ctrl = cmds.ls(sl=True)[0]
+drivenMesh = cmds.ls(sl=True)[0]
+
+
+
+getMeshShape = cmds.listRelatives(collsionMesh)[0]
+
+closetPom = cmds.createNode('closestPointOnMesh', n = collsionMesh + '_pom')
+cmds.connectAttr( collsionMesh + '.worldMatrix[0]', closetPom +  '.inputMatrix')
+cmds.connectAttr( getMeshShape + '.outMesh', closetPom +  '.inMesh')
+
+ctrDecomp = cmds.createNode('decomposeMatrix', n = collsionMesh + '_pom')
+cmds.connectAttr( ctrl + '.worldMatrix[0]', ctrDecomp + '.inputMatrix')
+cmds.connectAttr( ctrDecomp + '.outputTranslate', closetPom + '.inPosition')
+
+
+
+#resetup xyz
+#zpos
+zposPt = cmds.createNode('vectorProduct' , n = collsionMesh + '_z_pose_pt' )
+cmds.setAttr(zposPt + '.operation', 2 )
+cmds.setAttr(zposPt + '.normalizeOutput', 1 )
+cmds.setAttr(zposPt + '.input1X', 1 )
+cmds.connectAttr( closetPom + '.normal', zposPt +  '.input2')
+
+
+#xpos
+xposPt = cmds.createNode('vectorProduct' , n = collsionMesh + '_x_pose_pt' )
+cmds.setAttr(xposPt + '.operation', 2 )
+cmds.setAttr(xposPt + '.normalizeOutput', 1 )
+cmds.connectAttr( zposPt + '.output', xposPt +  '.input2')
+cmds.connectAttr( closetPom + '.normal', xposPt +  '.input1')
+#
+collisionFBFmatrix = cmds.createNode('fourByFourMatrix' , n = collsionMesh + '_collisionFBFmatrix' )
+
+cmds.connectAttr( xposPt + '.output.outputX', collisionFBFmatrix +  '.in00')
+cmds.connectAttr( xposPt + '.output.outputY', collisionFBFmatrix +  '.in01')
+cmds.connectAttr( xposPt + '.output.outputZ', collisionFBFmatrix +  '.in02')
+
+cmds.connectAttr( zposPt + '.output.outputX', collisionFBFmatrix +  '.in20')
+cmds.connectAttr( zposPt + '.output.outputY', collisionFBFmatrix +  '.in21')
+cmds.connectAttr( zposPt + '.output.outputZ', collisionFBFmatrix +  '.in22')
+
+cmds.connectAttr( closetPom + '.normal.normalX', collisionFBFmatrix +  '.in10')
+cmds.connectAttr( closetPom + '.normal.normalY', collisionFBFmatrix +  '.in11')
+cmds.connectAttr( closetPom + '.normal.normalZ', collisionFBFmatrix +  '.in12')
+
+cmds.connectAttr( closetPom + '.result.position.positionX', collisionFBFmatrix +  '.in30')
+cmds.connectAttr( closetPom + '.result.position.positionY', collisionFBFmatrix +  '.in31')
+cmds.connectAttr( closetPom + '.result.position.positionZ', collisionFBFmatrix +  '.in32')
+
+
+#collisionMultMat = cmds.createNode('multMatrix' , n = collsionMesh + '_mult_mat' )
+decompsMat = cmds.createNode('decomposeMatrix',  n = collsionMesh + '_decomp_mat' )
+#cmds.connectAttr( collisionFBFmatrix + '.output', collisionMultMat +  '.matrixIn')
+#cmds.connectAttr( collisionMultMat + '.matrixSum', decompsMat +  '.inputMatrix')
+cmds.connectAttr( collisionFBFmatrix + '.output', decompsMat +  '.inputMatrix')
+
+#fianl mesh
+cmds.connectAttr( decompsMat + '.outputTranslate', drivenMesh +  '.translate')
+cmds.connectAttr( decompsMat + '.outputRotate', drivenMesh +  '.rotate')
+
